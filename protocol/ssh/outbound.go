@@ -22,6 +22,7 @@ import (
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/service"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -36,7 +37,7 @@ type Outbound struct {
 	outbound.Adapter
 	ctx               context.Context
 	logger            logger.ContextLogger
-	dnsRouter         adapter.Router
+	dnsRouter         adapter.DNSRouter
 	dialer            N.Dialer
 	serverAddr        M.Socksaddr
 	user              string
@@ -58,7 +59,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter:           outbound.NewAdapterWithDialerOptions(C.TypeSSH, tag, []string{N.NetworkTCP}, options.DialerOptions),
 		ctx:               ctx,
 		logger:            logger,
-		dnsRouter:         router,
+		dnsRouter:         service.FromContext[adapter.DNSRouter](ctx),
 		dialer:            outboundDialer,
 		serverAddr:        options.ServerOptions.Build(),
 		user:              options.User,
@@ -190,7 +191,7 @@ func (s *Outbound) Close() error {
 
 func (s *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	if destination.IsFqdn() {
-		destinationAddresses, err := s.dnsRouter.LookupDefault(ctx, destination.Fqdn)
+		destinationAddresses, err := s.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
 			return nil, err
 		}

@@ -9,7 +9,6 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-dns"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -41,13 +40,13 @@ func New(ctx context.Context, options option.DialerOptions) (N.Dialer, error) {
 		return NewDefault(networkManager, options)
 	}
 	if options.Detour == "" {
-		router := service.FromContext[adapter.Router](ctx)
+		router := service.FromContext[adapter.DNSRouter](ctx)
 		if router != nil {
 			dialer = NewResolveDialer(
 				router,
 				dialer,
 				options.Detour == "" && !options.TCPFastOpen,
-				dns.DomainStrategy(options.DomainStrategy),
+				C.DomainStrategy(options.DomainStrategy),
 				time.Duration(options.FallbackDelay))
 		}
 	}
@@ -67,10 +66,10 @@ func NewDirect(ctx context.Context, options option.DialerOptions) (ParallelInter
 		return nil, err
 	}
 	return NewResolveParallelInterfaceDialer(
-		service.FromContext[adapter.Router](ctx),
+		service.FromContext[adapter.DNSRouter](ctx),
 		dialer,
 		true,
-		dns.DomainStrategy(options.DomainStrategy),
+		C.DomainStrategy(options.DomainStrategy),
 		time.Duration(options.FallbackDelay),
 	), nil
 }

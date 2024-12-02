@@ -42,6 +42,7 @@ var _ adapter.ClashServer = (*Server)(nil)
 type Server struct {
 	ctx             context.Context
 	router          adapter.Router
+	dnsRouter       adapter.DNSRouter
 	outboundManager adapter.OutboundManager
 	logger          log.Logger
 	httpServer      *http.Server
@@ -63,6 +64,7 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 	s := &Server{
 		ctx:             ctx,
 		router:          service.FromContext[adapter.Router](ctx),
+		dnsRouter:       service.FromContext[adapter.DNSRouter](ctx),
 		outboundManager: service.FromContext[adapter.OutboundManager](ctx),
 		logger:          logFactory.NewLogger("clash-api"),
 		httpServer: &http.Server{
@@ -119,7 +121,7 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 		r.Mount("/script", scriptRouter())
 		r.Mount("/profile", profileRouter())
 		r.Mount("/cache", cacheRouter(ctx))
-		r.Mount("/dns", dnsRouter(s.router))
+		r.Mount("/dns", dnsRouter(s.dnsRouter))
 
 		s.setupMetaAPI(r)
 	})
@@ -222,7 +224,7 @@ func (s *Server) SetMode(newMode string) {
 		default:
 		}
 	}
-	s.router.ClearDNSCache()
+	s.dnsRouter.ClearCache()
 	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
 	if cacheFile != nil {
 		err := cacheFile.StoreMode(newMode)

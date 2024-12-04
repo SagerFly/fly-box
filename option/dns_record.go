@@ -20,7 +20,7 @@ type DNSResponseOptions struct {
 	Query     badoption.Listable[string]       `json:"query,omitempty"`
 	QueryType badoption.Listable[DNSQueryType] `json:"query_type,omitempty"`
 
-	RCode  DNSRCode                             `json:"rcode,omitempty"`
+	RCode  *DNSRCode                            `json:"rcode,omitempty"`
 	Answer badoption.Listable[DNSRecordOptions] `json:"answer,omitempty"`
 	Ns     badoption.Listable[DNSRecordOptions] `json:"ns,omitempty"`
 	Extra  badoption.Listable[DNSRecordOptions] `json:"extra,omitempty"`
@@ -56,24 +56,46 @@ func (r *DNSRCode) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+func (r *DNSRCode) Build() int {
+	if r == nil {
+		return dns.RcodeSuccess
+	}
+	return int(*r)
+}
+
 func (o DNSResponseOptions) Build() ([]dns.Question, *dns.Msg, error) {
 	var questions []dns.Question
-	if len(o.QueryType) == 0 {
-		return nil, nil, E.New("missing query_type")
-	}
-	for _, queryType := range o.QueryType {
-		for _, domain := range o.Query {
+	if len(o.Query) == 0 && len(o.QueryType) == 0 {
+		questions = []dns.Question{{Qclass: dns.ClassINET}}
+	} else if len(o.Query) == 0 {
+		for _, queryType := range o.QueryType {
 			questions = append(questions, dns.Question{
-				Name:   dns.Fqdn(domain),
 				Qtype:  uint16(queryType),
 				Qclass: dns.ClassINET,
 			})
+		}
+	} else if len(o.QueryType) == 0 {
+		for _, domain := range o.Query {
+			questions = append(questions, dns.Question{
+				Name:   dns.Fqdn(domain),
+				Qclass: dns.ClassINET,
+			})
+		}
+	} else {
+		for _, queryType := range o.QueryType {
+			for _, domain := range o.Query {
+				questions = append(questions, dns.Question{
+					Name:   dns.Fqdn(domain),
+					Qtype:  uint16(queryType),
+					Qclass: dns.ClassINET,
+				})
+			}
 		}
 	}
 	return questions, &dns.Msg{
 		MsgHdr: dns.MsgHdr{
 			Response: true,
-			Rcode:    int(o.RCode),
+			Rcode:    o.RCode.Build(),
 		},
 		Answer: common.Map(o.Answer, DNSRecordOptions.build),
 		Ns:     common.Map(o.Ns, DNSRecordOptions.build),

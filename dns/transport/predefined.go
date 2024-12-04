@@ -57,7 +57,21 @@ func (t *PredefinedTransport) Reset() {
 func (t *PredefinedTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
 	for _, response := range t.responses {
 		for _, question := range response.questions {
-			if common.Contains(message.Question, question) {
+			if func() bool {
+				if question.Name == "" && question.Qtype == mDNS.TypeNone {
+					return true
+				} else if question.Name == "" {
+					return common.Any(message.Question, func(it mDNS.Question) bool {
+						return it.Qtype == question.Qtype
+					})
+				} else if question.Qtype == mDNS.TypeNone {
+					return common.Any(message.Question, func(it mDNS.Question) bool {
+						return it.Name == question.Name
+					})
+				} else {
+					return common.Contains(message.Question, question)
+				}
+			}() {
 				copyAnswer := *response.answer
 				copyAnswer.Id = message.Id
 				return &copyAnswer, nil

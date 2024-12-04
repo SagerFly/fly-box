@@ -7,6 +7,7 @@ import (
 
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/deprecated"
+	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/json/badjson"
@@ -223,7 +224,7 @@ func (o *NewDNSServerOptions) Upgrade(ctx context.Context) error {
 		o.Options = &PredefinedDNSServerOptions{
 			Responses: []DNSResponseOptions{
 				{
-					RCode: DNSRCode(rcode),
+					RCode: common.Ptr(DNSRCode(rcode)),
 				},
 			},
 		}

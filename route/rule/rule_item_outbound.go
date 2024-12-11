@@ -1,9 +1,11 @@
 package rule
 
 import (
+	"context"
 	"strings"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/experimental/deprecated"
 	F "github.com/sagernet/sing/common/format"
 )
 
@@ -15,11 +17,12 @@ type OutboundItem struct {
 	matchAny    bool
 }
 
-func NewOutboundRule(outbounds []string) *OutboundItem {
+func NewOutboundRule(ctx context.Context, outbounds []string) *OutboundItem {
 	rule := &OutboundItem{outbounds: outbounds, outboundMap: make(map[string]bool)}
 	for _, outbound := range outbounds {
 		if outbound == "any" {
 			rule.matchAny = true
+			deprecated.Report(ctx, deprecated.OptionAnyOutboundDNSRuleItem)
 		} else {
 			rule.outboundMap[outbound] = true
 		}

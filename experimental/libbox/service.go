@@ -35,7 +35,7 @@ import (
 type BoxService struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	urlTestHistoryStorage *urltest.HistoryStorage
+	urlTestHistoryStorage adapter.URLTestHistoryStorage
 	instance              *box.Box
 	clashServer           adapter.ClashServer
 	pauseManager          pause.Manager
@@ -243,6 +243,10 @@ func (w *platformInterfaceWrapper) ReadWIFIState() adapter.WIFIState {
 		return adapter.WIFIState{}
 	}
 	return (adapter.WIFIState)(*wifiState)
+}
+
+func (w *platformInterfaceWrapper) SystemCertificates() []string {
+	return iteratorToArray[string](w.iif.SystemCertificates())
 }
 
 func (w *platformInterfaceWrapper) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort, destination netip.AddrPort) (*process.Info, error) {

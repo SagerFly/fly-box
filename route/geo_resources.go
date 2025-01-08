@@ -2,6 +2,7 @@ package route
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"net"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	R "github.com/sagernet/sing-box/route/rule"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
+	"github.com/sagernet/sing/common/ntp"
 	"github.com/sagernet/sing/common/rw"
 	"github.com/sagernet/sing/service/filemanager"
 )
@@ -165,6 +167,10 @@ func (r *Router) downloadGeoIPDatabase(savePath string) error {
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 				return detour.DialContext(ctx, network, M.ParseSocksaddr(addr))
 			},
+			TLSClientConfig: &tls.Config{
+				Time:    ntp.TimeFuncFromContext(r.ctx),
+				RootCAs: adapter.RootPoolFromContext(r.ctx),
+			},
 		},
 	}
 	defer httpClient.CloseIdleConnections()
@@ -219,6 +225,10 @@ func (r *Router) downloadGeositeDatabase(savePath string) error {
 			TLSHandshakeTimeout: C.TCPTimeout,
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 				return detour.DialContext(ctx, network, M.ParseSocksaddr(addr))
+			},
+			TLSClientConfig: &tls.Config{
+				Time:    ntp.TimeFuncFromContext(r.ctx),
+				RootCAs: adapter.RootPoolFromContext(r.ctx),
 			},
 		},
 	}

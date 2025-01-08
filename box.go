@@ -12,6 +12,7 @@ import (
 	"github.com/sagernet/sing-box/adapter/endpoint"
 	"github.com/sagernet/sing-box/adapter/inbound"
 	"github.com/sagernet/sing-box/adapter/outbound"
+	"github.com/sagernet/sing-box/common/certificate"
 	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/common/taskmonitor"
 	"github.com/sagernet/sing-box/common/tls"
@@ -131,6 +132,20 @@ func New(options Options) (*Box, error) {
 		return nil, E.Cause(err, "create log factory")
 	}
 
+	var services []adapter.LifecycleService
+	certificateOptions := common.PtrValueOrDefault(options.Certificate)
+	if C.IsAndroid || certificateOptions.Store != "" && certificateOptions.Store != C.CertificateStoreSystem ||
+		len(certificateOptions.Certificate) > 0 ||
+		len(certificateOptions.CertificatePath) > 0 ||
+		len(certificateOptions.CertificateDirectoryPath) > 0 {
+		certificateStore, err := certificate.NewStore(ctx, logFactory.NewLogger("certificate"), certificateOptions)
+		if err != nil {
+			return nil, err
+		}
+		service.MustRegister[adapter.CertificateStore](ctx, certificateStore)
+		services = append(services, certificateStore)
+	}
+
 	routeOptions := common.PtrValueOrDefault(options.Route)
 	endpointManager := endpoint.NewManager(logFactory.NewLogger("endpoint"), endpointRegistry)
 	inboundManager := inbound.NewManager(logFactory.NewLogger("inbound"), inboundRegistry, endpointManager)
@@ -235,7 +250,6 @@ func New(options Options) (*Box, error) {
 			return nil, E.Cause(err, "initialize platform interface")
 		}
 	}
-	var services []adapter.LifecycleService
 	if needCacheFile {
 		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
